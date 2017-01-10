@@ -1,0 +1,375 @@
+#+OPTIONS: reveal_center:t reveal_progress:t reveal_history:t reveal_control:t
+#+OPTIONS: reveal_mathjax:t reveal_rolling_links:t reveal_keyboard:t reveal_overview:t num:nil
+#+OPTIONS: reveal_width:1200 reveal_height:800
+#+OPTIONS: toc:nil timestamp:nil author:nil
+#+REVEAL_MARGIN: 0.0
+#+REVEAL_MIN_SCALE: 0.1
+#+REVEAL_MAX_SCALE: 1.0
+#+REVEAL_TRANS: none
+#+REVEAL_THEME: night
+#+REVEAL_HLEVEL: 1
+#+REVEAL_DEFAULT_FRAG_STYLE: roll-in
+#+REVEAL_ROOT: file:///home/dancluna/bin/reveal.js-3.3.0
+
+#+TITLE: Ruby workflow tips
+* Tracer
+   The [[http://ruby-doc.org/stdlib-2.0.0/libdoc/tracer/rdoc/Tracer.html][Tracer class]] has a few methods for registering a source-level execution
+   of your Ruby program.
+
+   You can invoke it as follows:
+
+   - Passing the '-r tracer' option to the ruby interpreter
+
+     #+BEGIN_SRC sh
+       cat > example.rb <<EOF
+       class A
+         def square(a)
+           return a*a
+         end
+       end
+
+       a = A.new
+       a.square(5)
+       EOF
+       ruby -r tracer example.rb
+     #+END_SRC
+
+   - Requiring it and using the 'on' class method
+
+     #+BEGIN_SRC ruby
+       require 'tracer'
+       Tracer.stdout = File.open('/tmp/tracer_output.rb_trace', 'a')
+       Tracer.on {
+         class A
+           def square(a)
+             return a*a
+           end
+         end
+
+         a = A.new
+         a.square(5)
+       }
+     #+END_SRC
+
+   In both cases, output is as follows:
+
+   #+BEGIN_QUOTE
+#0:<internal:lib/rubygems/custom_require>:38:Kernel:<: -
+#0:example.rb:3::-: class A
+#0:example.rb:3::C: class A
+#0:example.rb:4::-:   def square(a)
+#0:example.rb:7::E: end
+#0:example.rb:9::-: a = A.new
+#0:example.rb:10::-: a.square(5)
+#0:example.rb:4:A:>:   def square(a)
+#0:example.rb:5:A:-:     return a*a
+#0:example.rb:6:A:<:   end
+ |  |         | |  |
+ |  |         | |   ---------------------+ event
+ |  |         |  ------------------------+ class
+ |  |          --------------------------+ line
+ |   ------------------------------------+ filename
+  ---------------------------------------+ thread
+   #+END_QUOTE
+
+   Extra: yours truly wrote a Emacs minor mode so you can open the corresponding
+   files more easily. [[https://gist.github.com/dcluna/c7b9be4e71b5ea0993cd056fa48283f5][Gist here]].
+* gc_tracer
+  [[https://github.com/ko1/gc_tracer][gc_tracer]] is a gem that allows one to trace GC execution. It logs GC
+  statistics information to stderr or a file (if given).
+
+*** Usage
+
+    #+BEGIN_SRC ruby
+      require 'gc_tracer'
+      # If ENV['GC_TRACER_LOGFILE'] is given, then this value and pid (concatenated with '-') is used as filename.
+      GC::Tracer.start_logging(filename = nil) do
+        # do something
+      end
+    #+END_SRC
+
+*** Collected stats
+
+**** GC.stat
+     Retrieves information from Ruby's [[https://ruby-doc.org/core-2.1.1/GC.html#method-c-stat][GC.stat]] method.
+
+     #+BEGIN_QUOTE
+     {
+      :count=>2,
+      :heap_used=>9,
+      :heap_length=>11,
+      :heap_increment=>2,
+      :heap_live_slot=>6836,
+      :heap_free_slot=>519,
+      :heap_final_slot=>0,
+      :heap_swept_slot=>818,
+      :total_allocated_object=>7674,
+      :total_freed_object=>838,
+      :malloc_increase=>181034,
+      :malloc_limit=>16777216,
+      :minor_gc_count=>2,
+      :major_gc_count=>0,
+      :remembered_shady_object=>55,
+      :remembered_shady_object_limit=>0,
+      :old_object=>2422,
+      :old_object_limit=>0,
+      :oldmalloc_increase=>277386,
+      :oldmalloc_limit=>16777216
+     }
+     #+END_QUOTE
+
+**** GC.latest_gc_info
+
+     #+BEGIN_QUOTE
+     {:major_by=>nil,
+ :gc_by=>:newobj,
+ :have_finalizer=>true,
+ :immediate_sweep=>false,
+ :state=>:sweeping}
+
+     #+END_QUOTE
+
+**** getrusage
+     Linux's [[http://man7.org/linux/man-pages/man2/getrusage.2.html][getrusage]] call, whose results are returned in the following struct:
+
+     #+BEGIN_SRC c
+       struct rusage {
+         struct timeval ru_utime; /* user CPU time used */
+         struct timeval ru_stime; /* system CPU time used */
+         long   ru_maxrss;        /* maximum resident set size */
+         long   ru_ixrss;         /* integral shared memory size */
+         long   ru_idrss;         /* integral unshared data size */
+         long   ru_isrss;         /* integral unshared stack size */
+         long   ru_minflt;        /* page reclaims (soft page faults) */
+         long   ru_majflt;        /* page faults (hard page faults) */
+         long   ru_nswap;         /* swaps */
+         long   ru_inblock;       /* block input operations */
+         long   ru_oublock;       /* block output operations */
+         long   ru_msgsnd;        /* IPC messages sent */
+         long   ru_msgrcv;        /* IPC messages received */
+         long   ru_nsignals;      /* signals received */
+         long   ru_nvcsw;         /* voluntary context switches */
+         long   ru_nivcsw;        /* involuntary context switches */
+       };
+     #+END_SRC
+
+**** Custom fields/events
+     It's also possible to include custom fields/events in the output.
+
+     - Custom fields
+      #+BEGIN_SRC ruby
+        GC::Tracer.start_logging(custom_fields: [:name1, :name2, ...]) do
+          # All fields are cleared by zero.
+
+          # You can increment values of each field.
+          GC::Tracer.custom_field_increment(:name1)
+          # It is equivalent to
+          #   GC::Tracer.custom_field_set(:name1, GC::Tracer.custom_field_get(:name1))
+
+          # You can also decrement values
+          GC::Tracer.custom_field_decrement(:name1)
+
+          # Now, you can specify only Fixnum as field value.
+          GC::Tracer.custom_field_set(:name2, 123)
+
+          # You can specify an index instead of field name (faster than actual name)
+          GC::Tracer.custom_field_increment(0) # :name1
+        end
+      #+END_SRC
+
+     - Custom events
+       #+BEGIN_SRC ruby
+         GC::Tracer.start_logging(events: %i(start), gc_stat: false) do
+           1_000.times{|i|
+             1_000.times{''}
+             GC::Tracer.custom_event_logging("custom_#{i}")
+           }
+         end
+       #+END_SRC
+* pry
+  The famous [[https://github.com/pry/pry/wiki][irb replacement]]/debugger/swiss army knife.
+** pry-rescue
+   [[https://github.com/ConradIrwin/pry-rescue][pry-rescue]] is a gem that implements "break on unhandled exception" for Ruby.
+
+   This is particularly useful with failing specs.
+*** Usage
+
+    Prepend rails/rspec/respec with `rescue` and you're good to go. When an
+    unhandled exception is raised, you'll see a prompt such as follows:
+
+    #+BEGIN_SRC sh
+      $ rescue rspec
+      From: /home/conrad/0/ruby/pry-rescue/examples/example_spec.rb @ line 9 :
+
+      6:
+      7: describe "Float" do
+      8:   it "should be able to add" do
+      =>  9:     (0.1 + 0.2).should == 0.3
+      10:   end
+      11: end
+
+      RSpec::Expectations::ExpectationNotMetError: expected: 0.3
+      got: 0.30000000000000004 (using ==)
+      [1] pry(main)>
+    #+END_SRC
+
+    When you're finished fixing the implementation, use the `try-again` method
+    to re-run the infringing file/spec.
+** pry-stack_explorer
+   [[https://github.com/pry/pry-stack_explorer][This gem]] is a nice companion to pry-rescue. It allows one to inspect and
+   navigate up and down in the current stack trace.
+
+*** Commands
+    - show-stack
+
+      Shows the current stack frames.
+
+      #+BEGIN_QUOTE
+      pry(J)> show-stack
+
+Showing all accessible frames in stack:
+--
+=> #0 [method]  c <Object#c()>
+   #1 [block]   block in b <Object#b()>
+   #2 [method]  b <Object#b()>
+   #3 [method]  alphabet <Object#alphabet(y)>
+   #4 [class]   <class:J>
+   #5 [block]   block in <main>
+   #6 [eval]    <main>
+   #7 [top]     <main>
+      #+END_QUOTE
+
+    - frame N
+
+      Jumps to the N-th frame in the current stack.
+
+      #+BEGIN_QUOTE
+pry(J)> frame 3
+
+Frame number: 3/7
+Frame type: method
+
+From: /Users/john/ruby/projects/pry-stack_explorer/examples/example.rb @ line 10 in Object#alphabet:
+
+     5:
+     6: require 'pry-stack_explorer'
+     7:
+     8: def alphabet(y)
+     9:   x = 20
+ => 10:   b
+    11: end
+    12:
+    13: def b
+    14:   x = 30
+    15:   proc {
+      #+END_QUOTE
+
+      Use the up/down methods to move a frame in the respective direction.
+
+      This method, coupled w/ pry's `ls` method (shows the current bindings),
+      allows one to easily inspect the state of the current stack.
+** pry-doc
+   Default pry does not include documentation for Ruby core methods. [[https://github.com/pry/pry-doc][This gem]]
+   fixes that.
+
+   #+CAPTION: pry-doc show source preview
+   #+NAME: pry-doc-show-source-preview
+   [[file:show-source-preview.png][file:./show-source-preview.png]]
+
+   #+CAPTION: pry-doc show doc preview
+   #+NAME: pry-doc-show-doc-preview
+   [[file:show-doc-preview.png][file:./show-doc-preview.png]]
+
+   From the gem's docs:
+
+   #+BEGIN_QUOTE
+   Generally speaking, you can retrieve most of the MRI documentation and
+   accompanying source code. Pry Doc is also smart enough to get any
+   documentation for methods and classes implemented in C.
+   #+END_QUOTE
+** .pryrc
+   Pry also has a config file in the spirit of .irbrc. It supports both a
+   "global" file in your home directory (~/.pryrc) and a per-project .pryrc file.
+
+   Almost every aspect of pry can be customized through this file. Check the
+   [[https://github.com/pry/pry/wiki/Pry-rc][documentation]] for more details.
+** pry-inline
+   This [[https://github.com/seikichi/pry-inline][plugin]] Enables a RubyMine-ish inline variables view.
+
+   #+CAPTION: pry-inline preview
+   #+NAME: pry-inline-preview
+   [[file:pry-inline-screenshot.png][file:./pry-inline-screenshot.png]]
+** pry-macro
+   This [[https://github.com/baweaver/pry-macro][plugin]] records command-line actions for replaying.
+
+   Possible usage scenario:
+
+   #+BEGIN_SRC sh
+[1] pry(main)> record-macro
+[2] pry(main)> 1
+=> 1
+[3] pry(main)> 'foo'
+=> "foo"
+[4] pry(main)> ls
+self.methods: inspect  to_s
+locals: _  __  _dir_  _ex_  _file_  _in_  _out_  _pry_
+
+[5] pry(main)> stop-macro
+Macro Name: testing
+
+[6] pry(main)> testing
+=> 1
+=> "foo"
+self.methods: inspect  to_s
+locals: _  __  _dir_  _ex_  _file_  _in_  _out_  _pry_
+
+[10] pry(main)> save-macro testing
+   #+END_SRC
+
+   And the saved macro goes in your .pryrc:
+
+   #+BEGIN_SRC ruby
+     Pry::Commands.block_command 'testing', 'no description' do
+       _pry_.input = StringIO.new(
+         <<-MACRO.gsub(/^ {4,6}/, '')
+           1
+           'foo'
+           ls
+         MACRO
+       )
+     end
+   #+END_SRC
+* Bundler
+** Setting local gem path
+   Bundler [[http://bundler.io/v1.3/man/bundle-config.1.html][allows working against a local git repo]] instead of the remote version.
+
+   To do that, check the following command:
+
+   #+BEGIN_SRC sh
+# bundle config local.GEM_NAME /path/to/local/git/repository
+# for instance, to use a local rack checkout:
+bundle config local.rack ~/Work/git/rack
+   #+END_SRC
+
+   Bundler also ensures that the current revision in the Gemfile.lock exists in
+   the local git repository, so you won't have a version mismatch while using
+   this.
+
+   This feature is particularly useful when debugging gems - you can make
+   changes to the local git repo and just stash/discard them via git when done.
+
+   You can also do the same via the `path` option in [[http://bundler.io/v1.5/gemfile.html][Gemfile]]:
+
+   #+BEGIN_SRC ruby
+   gem 'rack', path: '~/Work/git/rack'
+   #+END_SRC
+* git
+** Commit message template
+   According to the [[https://git-scm.com/docs/git-config#git-config-committemplate][git-config docs]], the `config.template` option allows one to
+   specify a commit message template that will be automatically filled in when
+   running `git commit`.
+
+   Coupled with [[http://githooks.com/][git hooks]], you can automate most boring parts of the git message
+   workflow. One tip: combining a post-checkout hook, a branch name
+   convention based on the current ticket and the aforementioned template file
+   to auto-fill the ticket number in the commit message.
