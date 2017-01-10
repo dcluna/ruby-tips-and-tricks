@@ -1,0 +1,5 @@
+* Ruby tips and tricks 
+
+  Small presentation with some Ruby workflow tips I accumulated while working.
+  Not meant to be a comprehensive list, just a small set of tools and techniques
+  that give a more IDE-like experience to Ruby development.
