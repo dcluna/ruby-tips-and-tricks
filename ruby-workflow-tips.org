@@ -1,13 +1,13 @@
 #+OPTIONS: reveal_center:t reveal_progress:t reveal_history:t reveal_control:t
 #+OPTIONS: reveal_mathjax:t reveal_rolling_links:t reveal_keyboard:t reveal_overview:t num:nil
 #+OPTIONS: reveal_width:1200 reveal_height:800
-#+OPTIONS: toc:nil timestamp:nil author:nil
+#+OPTIONS: toc:nil timestamp:nil author:nil ^:nil
 #+REVEAL_MARGIN: 0.0
 #+REVEAL_MIN_SCALE: 0.1
 #+REVEAL_MAX_SCALE: 1.0
 #+REVEAL_TRANS: none
 #+REVEAL_THEME: night
-#+REVEAL_HLEVEL: 1
+#+REVEAL_HLEVEL: 2
 #+REVEAL_DEFAULT_FRAG_STYLE: roll-in
 #+REVEAL_ROOT: file:///home/dancluna/bin/reveal.js-3.3.0
 
@@ -18,6 +18,7 @@
 
    You can invoke it as follows:
 
+#+REVEAL: split
    - Passing the '-r tracer' option to the ruby interpreter
 
      #+BEGIN_SRC sh
@@ -34,6 +35,7 @@
        ruby -r tracer example.rb
      #+END_SRC
 
+#+REVEAL: split
    - Requiring it and using the 'on' class method
 
      #+BEGIN_SRC ruby
@@ -51,9 +53,10 @@
        }
      #+END_SRC
 
+#+REVEAL: split
    In both cases, output is as follows:
 
-   #+BEGIN_QUOTE
+   #+BEGIN_EXAMPLE
 #0:<internal:lib/rubygems/custom_require>:38:Kernel:<: -
 #0:example.rb:3::-: class A
 #0:example.rb:3::C: class A
@@ -70,8 +73,9 @@
  |  |          --------------------------+ line
  |   ------------------------------------+ filename
   ---------------------------------------+ thread
-   #+END_QUOTE
+   #+END_EXAMPLE
 
+#+REVEAL: split
    Extra: yours truly wrote a Emacs minor mode so you can open the corresponding
    files more easily. [[https://gist.github.com/dcluna/c7b9be4e71b5ea0993cd056fa48283f5][Gist here]].
 * gc_tracer
@@ -118,6 +122,7 @@
      }
      #+END_QUOTE
 
+#+REVEAL: split
 **** GC.latest_gc_info
 
      #+BEGIN_QUOTE
@@ -129,6 +134,7 @@
 
      #+END_QUOTE
 
+#+REVEAL: split
 **** getrusage
      Linux's [[http://man7.org/linux/man-pages/man2/getrusage.2.html][getrusage]] call, whose results are returned in the following struct:
 
@@ -153,6 +159,7 @@
        };
      #+END_SRC
 
+#+REVEAL: split
 **** Custom fields/events
      It's also possible to include custom fields/events in the output.
 
@@ -220,6 +227,7 @@
    navigate up and down in the current stack trace.
 
 *** Commands
+#+REVEAL: split
     - show-stack
 
       Shows the current stack frames.
@@ -239,6 +247,7 @@ Showing all accessible frames in stack:
    #7 [top]     <main>
       #+END_QUOTE
 
+#+REVEAL: split
     - frame N
 
       Jumps to the N-th frame in the current stack.
@@ -272,14 +281,17 @@ From: /Users/john/ruby/projects/pry-stack_explorer/examples/example.rb @ line 10
    Default pry does not include documentation for Ruby core methods. [[https://github.com/pry/pry-doc][This gem]]
    fixes that.
 
+#+REVEAL: split
    #+CAPTION: pry-doc show source preview
    #+NAME: pry-doc-show-source-preview
    [[file:show-source-preview.png][file:./show-source-preview.png]]
 
+#+REVEAL: split
    #+CAPTION: pry-doc show doc preview
    #+NAME: pry-doc-show-doc-preview
    [[file:show-doc-preview.png][file:./show-doc-preview.png]]
 
+#+REVEAL: split
    From the gem's docs:
 
    #+BEGIN_QUOTE
