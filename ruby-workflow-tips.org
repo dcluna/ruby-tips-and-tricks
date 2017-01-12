@@ -9,7 +9,7 @@
 #+REVEAL_THEME: night
 #+REVEAL_HLEVEL: 2
 #+REVEAL_DEFAULT_FRAG_STYLE: roll-in
-#+REVEAL_ROOT: file:///home/dancluna/bin/reveal.js-3.3.0
+#+REVEAL_ROOT: http://cdn.jsdelivr.net/reveal.js/3.0.0/
 
 #+TITLE: Ruby workflow tips
 * Tracer
@@ -93,7 +93,7 @@
     #+END_SRC
 
 *** Collected stats
-
+#+REVEAL: split
 **** GC.stat
      Retrieves information from Ruby's [[https://ruby-doc.org/core-2.1.1/GC.html#method-c-stat][GC.stat]] method.
 
@@ -184,6 +184,7 @@
         end
       #+END_SRC
 
+#+REVEAL: split
      - Custom events
        #+BEGIN_SRC ruby
          GC::Tracer.start_logging(events: %i(start), gc_stat: false) do
@@ -220,6 +221,7 @@
       [1] pry(main)>
     #+END_SRC
 
+#+REVEAL: split
     When you're finished fixing the implementation, use the `try-again` method
     to re-run the infringing file/spec.
 ** pry-stack_explorer
@@ -232,7 +234,7 @@
 
       Shows the current stack frames.
 
-      #+BEGIN_QUOTE
+      #+BEGIN_EXAMPLE
       pry(J)> show-stack
 
 Showing all accessible frames in stack:
@@ -245,14 +247,14 @@ Showing all accessible frames in stack:
    #5 [block]   block in <main>
    #6 [eval]    <main>
    #7 [top]     <main>
-      #+END_QUOTE
+      #+END_EXAMPLE
 
 #+REVEAL: split
     - frame N
 
       Jumps to the N-th frame in the current stack.
 
-      #+BEGIN_QUOTE
+      #+BEGIN_EXAMPLE
 pry(J)> frame 3
 
 Frame number: 3/7
@@ -271,8 +273,9 @@ From: /Users/john/ruby/projects/pry-stack_explorer/examples/example.rb @ line 10
     13: def b
     14:   x = 30
     15:   proc {
-      #+END_QUOTE
+      #+END_EXAMPLE
 
+#+REVEAL: split
       Use the up/down methods to move a frame in the respective direction.
 
       This method, coupled w/ pry's `ls` method (shows the current bindings),
@@ -338,6 +341,7 @@ locals: _  __  _dir_  _ex_  _file_  _in_  _out_  _pry_
 [10] pry(main)> save-macro testing
    #+END_SRC
 
+#+REVEAL: split
    And the saved macro goes in your .pryrc:
 
    #+BEGIN_SRC ruby
@@ -351,6 +355,10 @@ locals: _  __  _dir_  _ex_  _file_  _in_  _out_  _pry_
        )
      end
    #+END_SRC
+** Debugger-driven development
+   There's an interesting video by Joel Turnbull [[https://youtu.be/4hfMUP5iTq8?t=20m7s][here]], in which he discusses and
+   live codes using Pry as the main driver for his development session. Heavily recommended.
+   #+REVEAL_HTML: <iframe width="560" height="315" src="https://www.youtube.com/embed/4hfMUP5iTq8?t=20m7s" frameborder="0" allowfullscreen></iframe>
 * Bundler
 ** Setting local gem path
    Bundler [[http://bundler.io/v1.3/man/bundle-config.1.html][allows working against a local git repo]] instead of the remote version.
@@ -363,6 +371,7 @@ locals: _  __  _dir_  _ex_  _file_  _in_  _out_  _pry_
 bundle config local.rack ~/Work/git/rack
    #+END_SRC
 
+#+REVEAL: split
    Bundler also ensures that the current revision in the Gemfile.lock exists in
    the local git repository, so you won't have a version mismatch while using
    this.
@@ -385,3 +394,5 @@ bundle config local.rack ~/Work/git/rack
    workflow. One tip: combining a post-checkout hook, a branch name
    convention based on the current ticket and the aforementioned template file
    to auto-fill the ticket number in the commit message.
+* Ruby-prof
+  Please refer to [[http://dcluna.github.io/2016/12/02/profiling_ruby_code/][this blog post]] for more info.
